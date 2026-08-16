@@ -30,9 +30,9 @@ The trade-off versus an MCP install — push notifications and per-session overl
 
 ## Usage with other agents
 
-`gortex install` (user-level) and `gortex init` (repo-level) together auto-detect and configure 19 other AI coding assistants — Kiro, Cursor, VS Code / Copilot, GitHub Copilot CLI, Windsurf, Continue.dev, Cline, OpenCode, Antigravity, Codex CLI, Gemini CLI, Zed, Aider, Kilo Code, OpenClaw, Hermes, Kimi, Pi, oh-my-pi. Each adapter writes only when its host is present on the machine, and every re-run is idempotent.
+`gortex install` (user-level) and `gortex init` (repo-level) together auto-detect and configure 20 other AI coding assistants — Kiro, Cursor, VS Code / Copilot, GitHub Copilot CLI, Windsurf, Continue.dev, Cline, OpenCode, Antigravity, Codex CLI, Gemini CLI, Zed, ZCode, Aider, Kilo Code, OpenClaw, Hermes, Kimi, Pi, oh-my-pi. Each adapter writes only when its host is present on the machine, and every re-run is idempotent.
 
-Four hosts read the same skill bodies Claude Code gets, each re-wrapped in its own frontmatter: Claude Code, Codex CLI, OpenCode and GitHub Copilot CLI. Codex and OpenCode share the cross-agent `~/.agents/skills` root, so one write serves both. For the remaining hosts, MCP tool descriptions carry the teaching and `gortex init` adds only a per-repo community-routing block — no duplicated instructions blocks in every repo.
+Five hosts read the same skill bodies Claude Code gets, each re-wrapped in its own frontmatter: Claude Code, Codex CLI, OpenCode, GitHub Copilot CLI and ZCode. Codex and OpenCode share the cross-agent `~/.agents/skills` root, so one write serves both. For the remaining hosts, MCP tool descriptions carry the teaching and `gortex init` adds only a per-repo community-routing block — no duplicated instructions blocks in every repo.
 
 - **Adapter matrix + per-agent schema notes:** [`agents.md`](agents.md)
 - **Audit what's currently configured:** `gortex doctor` (zero-op; `--json` for CI consumers)

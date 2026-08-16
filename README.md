@@ -29,7 +29,7 @@
 High-quality parsing 257 languages/grammars through tree-sitter AST analysis, in-process resolvers, enhanced with [compiler-grade resolution](https://github.com/zzet/gortex/blob/main/docs/lsp.md) for Python, TypeScript / JavaScript, PHP, C#, Go, C, C++, Java, Kotlin, Swift, Zig, Rust, Ruby, Elixir, Ocaml, Haskell, and [others](https://github.com/zzet/gortex/blob/main/docs/languages.md#at-a-glance) - producing a persistent provenance-tiered knowledge graph of functions, classes, call chains, HTTP routes, and cross-service contracts and calls with a strong confidence model. 175 (configurable) MCP tools - use only what you need. Zero dependencies. Plug and play across 19 coding agents. **Up to 50× fewer tokens per response**. Reproducible [benchmarks](BENCHMARK.md).
 
 
-> 19 AI coding agents (Claude Code, Kiro, Cursor, Windsurf, VS Code / Copilot, Continue.dev, Cline, OpenCode, Antigravity, Codex CLI, Gemini CLI, Zed, Aider, Kilo Code, OpenClaw, Hermes, Oh My Pi, Pi, Kimi) supported out of the box.
+> 21 AI coding agents (Claude Code, Kiro, Cursor, Windsurf, VS Code / Copilot, Continue.dev, Cline, OpenCode, Antigravity, Codex CLI, Gemini CLI, Zed, ZCode, Aider, Kilo Code, OpenClaw, Hermes, Oh My Pi, Pi, Kimi) supported out of the box.
 >
 > One install configures every one detected on your machine — see [docs/agents.md](docs/agents.md).
 
@@ -48,7 +48,7 @@ High-quality parsing 257 languages/grammars through tree-sitter AST analysis, in
 - **Cross-repo by default** — N repos in one graph; contracts, references, and call chains span repo boundaries with evidence-gated resolution, contract matching, impact analysis, per-session isolation → [docs/multi-repo.md](docs/multi-repo.md)
 - **Extreamly fast analysis** — a precomputed depth-3 reach index turns blast-radius queries into O(seeds × reach) map lookups. Safe to ask "what breaks if I change this?" on every edit. No dozens of tool calls to grasp context.
 - **Zero external dependencies** — single binary, everything in-process. No network, no model download to get started. Install, start daemon, use.
-- **Agent integrations (20)** — `gortex init` configures every detected coding assistant on the machine → [docs/agents.md](docs/agents.md)
+- **Agent integrations (21)** — `gortex init` configures every detected coding assistant on the machine → [docs/agents.md](docs/agents.md)
 - **100+ MCP tools, 16 resources, 3 prompts** — symbol lookup, call chains, blast radius, dataflow, clone detection, refactoring, code actions → [docs/mcp.md](docs/mcp.md)
 - **Semantic search default-on** — baked GloVe-50d (3.8 MB embedded), store-native FTS5/BM25 + vector with adaptive alpha fusion, zero deps; opt-in MiniLM / Ollama / OpenAI → [docs/semantic-search.md](docs/semantic-search.md)
 - **Speculative execution** — `preview_edit` / `simulate_chain` answer "what would change if I applied this WorkspaceEdit?" without touching disk
@@ -65,15 +65,22 @@ Full catalog of features: [docs/features.md](docs/features.md). Complete CLI ref
 
 ## Install
 
+This fork installs from `exorich-lab/gortex`:
+
 ```bash
-# macOS / Linux
-curl -fsSL https://get.gortex.dev | sh
+# macOS / Linux (from this fork)
+curl -fsSL https://raw.githubusercontent.com/exorich-lab/gortex/main/scripts/install.sh | sh
 
 # Windows (PowerShell)
-irm https://get.gortex.dev/install.ps1 | iex
+irm https://raw.githubusercontent.com/exorich-lab/gortex/main/scripts/install.ps1 | iex
 ```
 
-Detects OS/arch, verifies SHA256 + cosign, installs to PATH. Re-run to upgrade. Homebrew, `.deb` / `.rpm` / `.apk`, scoop, signed binaries, and from-source builds: [docs/installation.md](docs/installation.md).
+Detects OS/arch, verifies SHA256, installs to PATH; when no release
+tarball exists yet for your platform it falls back to a from-source
+build (requires Go). Re-run to upgrade. From-source builds directly:
+`git clone https://github.com/exorich-lab/gortex && cd gortex && go build -o ~/.local/bin/gortex ./cmd/gortex`.
+
+Upstream (zzet/gortex) install: [docs/installation.md](docs/installation.md).
 
 ## Quick Start
 

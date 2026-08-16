@@ -2,8 +2,7 @@
 # Gortex one-line installer for macOS and Linux.
 #
 # Usage:
-#   curl -fsSL https://get.gortex.dev | sh
-#   curl -fsSL https://raw.githubusercontent.com/zzet/gortex/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/exorich-lab/gortex/main/scripts/install.sh | sh
 #
 # Configuration via environment variables (all optional):
 #   GORTEX_VERSION        Release tag to install ("latest" or "v0.15.0")
@@ -11,12 +10,14 @@
 #   GORTEX_NO_VERIFY      Set to skip checksum + cosign verification
 #   GORTEX_NO_PATH        Set to skip PATH update in shell rc
 #   GORTEX_NO_BREW        Set to skip Homebrew (macOS) and force the tarball path
+#   GORTEX_NO_SOURCE      Set to skip the from-source fallback when no
+#                         release tarball is available for this platform
 #   GORTEX_FORCE          Set to overwrite an existing binary without backup
 #   GORTEX_DOWNLOAD_BASE  Override release download base URL (for testing)
 
 set -eu
 
-GORTEX_REPO="zzet/gortex"
+GORTEX_REPO="exorich-lab/gortex"
 GORTEX_BIN="gortex"
 DOWNLOAD_BASE="${GORTEX_DOWNLOAD_BASE:-https://github.com/${GORTEX_REPO}/releases}"
 
@@ -162,8 +163,10 @@ update_path_in_rc() {
 
 # Homebrew handoff. Cask is macOS-only and brew handles its own PATH, so we
 # only divert when the user has plain `brew` on PATH on macOS, isn't pinning
-# a version, and didn't pick a custom install dir.
+# a version, and didn't pick a custom install dir. Upstream-only: the cask
+# lives in the zzet tap, which a fork install has no right to push to.
 should_use_brew() {
+	[ "$GORTEX_REPO" = "zzet/gortex" ] || return 1
 	[ "$1" = darwin ] || return 1
 	[ -z "${GORTEX_NO_BREW:-}" ] || return 1
 	[ "${GORTEX_VERSION:-latest}" = latest ] || return 1
@@ -239,11 +242,20 @@ main() {
 	# shellcheck disable=SC2064  # we want $tmpdir expanded now, not at trap time.
 	trap "rm -rf '$tmpdir'" EXIT INT TERM
 
+	from_source=0
 	info "downloading $asset"
-	http_get "$asset_url" "$tmpdir/$asset" \
-		|| die "download failed: $asset_url"
+	if ! http_get "$asset_url" "$tmpdir/$asset"; then
+		# A fork may not have published release tarballs yet (or not for
+		# this platform). Fall back to a from-source build of the repo
+		# the installer came from rather than dying.
+		if build_from_source "$tmpdir"; then
+			from_source=1
+		else
+			die "download failed: $asset_url (and the from-source fallback was unavailable)"
+		fi
+	fi
 
-	if [ -z "${GORTEX_NO_VERIFY:-}" ]; then
+	if [ "$from_source" = 0 ] && [ -z "${GORTEX_NO_VERIFY:-}" ]; then
 		info "downloading checksums.txt"
 		if http_get "$checksums_url" "$tmpdir/checksums.txt"; then
 			# checksums.txt is `<sha256>  <filename>` per goreleaser default.
@@ -263,13 +275,17 @@ main() {
 		# README "Verifying releases" for the full standalone command.
 		if command -v cosign >/dev/null 2>&1; then
 			info "verifying cosign signature"
+			# The OIDC certificate identity names the repo the release was
+			# built by, so the regexp is derived from GORTEX_REPO (dots
+			# escaped) rather than pinned to upstream.
+			repo_regex="$(printf '%s' "$GORTEX_REPO" | sed 's/\./\\./g')"
 			if http_get "${asset_url}.sig" "$tmpdir/$asset.sig" \
 				&& http_get "${asset_url}.pem" "$tmpdir/$asset.pem"; then
 				if cosign verify-blob \
 						--certificate "$tmpdir/$asset.pem" \
 						--signature "$tmpdir/$asset.sig" \
-						--certificate-identity-regexp 'https://github\.com/zzet/gortex/.*' \
-						--certificate-oidc-issuer https://token.actions.githubusercontent.com \
+						--certificate-identity-regexp "https://github\\.com/${repo_regex}/.*" \
+						--certificate-oidcissuer https://token.actions.githubusercontent.com \
 						"$tmpdir/$asset" >/dev/null 2>&1; then
 					ok "cosign verified"
 				else
@@ -283,9 +299,11 @@ main() {
 		warn "verification disabled (GORTEX_NO_VERIFY)"
 	fi
 
-	info "extracting"
-	( cd "$tmpdir" && tar -xzf "$asset" )
-	[ -f "$tmpdir/$GORTEX_BIN" ] || die "archive did not contain a $GORTEX_BIN binary"
+	if [ "$from_source" = 0 ]; then
+		info "extracting"
+		( cd "$tmpdir" && tar -xzf "$asset" )
+	fi
+	[ -f "$tmpdir/$GORTEX_BIN" ] || die "no $GORTEX_BIN binary produced (archive or from-source build)"
 	chmod +x "$tmpdir/$GORTEX_BIN"
 
 	mkdir -p "$install_dir" || die "cannot create $install_dir"
@@ -338,6 +356,35 @@ main() {
 	printf '  - %sgortex install%s   one-time machine setup (MCP, skills, slash commands)\n' "${C_BOLD}" "${C_RESET}"
 	printf '  - %sgortex init%s      run inside a repo to wire up your AI assistant\n' "${C_BOLD}" "${C_RESET}"
 	printf '\nDocs: https://github.com/%s\n\n' "$GORTEX_REPO"
+}
+
+# build_from_source clones GORTEX_REPO at the requested ref and leaves a
+# freshly built $GORTEX_BIN in $1 (the install tmpdir, so the EXIT trap
+# cleans the clone up too). Used when no release tarball is available —
+# e.g. a fork before its first tagged release. Requires git + Go.
+build_from_source() {
+	if [ -n "${GORTEX_NO_SOURCE:-}" ]; then
+		warn "from-source fallback disabled (GORTEX_NO_SOURCE)"
+		return 1
+	fi
+	if ! command -v go >/dev/null 2>&1; then
+		warn "no Go toolchain for a from-source build (install Go, or set GORTEX_NO_SOURCE=1 to drop the fallback)"
+		return 1
+	fi
+	if ! command -v git >/dev/null 2>&1; then
+		warn "no git for a from-source build"
+		return 1
+	fi
+	case "${GORTEX_VERSION:-latest}" in
+		latest) ref="main" ;;
+		v*) ref="$GORTEX_VERSION" ;;
+		*) ref="v$GORTEX_VERSION" ;;
+	esac
+	info "building from source (${GORTEX_REPO} @ ${ref})"
+	src="$1/src"
+	git clone --quiet --depth 1 --branch "$ref" "https://github.com/${GORTEX_REPO}.git" "$src" || return 1
+	( cd "$src" && go build -trimpath -o "$1/$GORTEX_BIN" ./cmd/gortex ) || return 1
+	return 0
 }
 
 main "$@"

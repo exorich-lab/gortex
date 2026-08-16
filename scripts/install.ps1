@@ -8,7 +8,7 @@
     directory on the user PATH.
 
     Usage:
-        irm https://get.gortex.dev/install.ps1 | iex
+        irm https://raw.githubusercontent.com/exorich-lab/gortex/main/scripts/install.ps1 | iex
 
     Or, from a checkout:
         powershell -ExecutionPolicy Bypass -File scripts/install.ps1
@@ -25,7 +25,7 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$Repo        = 'zzet/gortex'
+$Repo        = 'exorich-lab/gortex'
 $BinName     = 'gortex.exe'
 $DownloadBase = if ($env:GORTEX_DOWNLOAD_BASE) { $env:GORTEX_DOWNLOAD_BASE } `
                 else { "https://github.com/$Repo/releases" }

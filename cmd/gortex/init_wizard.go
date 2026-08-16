@@ -40,6 +40,7 @@ var agentLabels = map[string]string{
 	"pi":          "Pi",
 	"vscode":      "VS Code (Copilot)",
 	"windsurf":    "Windsurf",
+	"zcode":       "ZCode",
 	"zed":         "Zed",
 }
 
@@ -65,6 +66,7 @@ var agentDetails = map[string]string{
 	"pi":          ".pi/extensions/gortex",
 	"vscode":      ".vscode/mcp.json",
 	"windsurf":    ".windsurf/mcp.json",
+	"zcode":       ".zcode/config.json + AGENTS.md",
 	"zed":         ".zed/settings.json",
 }
 

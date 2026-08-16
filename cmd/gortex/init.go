@@ -32,6 +32,7 @@ import (
 	"github.com/zzet/gortex/internal/agents/pi"
 	"github.com/zzet/gortex/internal/agents/vscode"
 	"github.com/zzet/gortex/internal/agents/windsurf"
+	"github.com/zzet/gortex/internal/agents/zcode"
 	"github.com/zzet/gortex/internal/agents/zed"
 	"github.com/zzet/gortex/internal/claudemd"
 	"github.com/zzet/gortex/internal/config"
@@ -139,6 +140,7 @@ func buildRegistry() *agents.Registry {
 	r.Register(pi.New())
 	r.Register(vscode.New())
 	r.Register(windsurf.New())
+	r.Register(zcode.New())
 	r.Register(zed.New())
 	return r
 }

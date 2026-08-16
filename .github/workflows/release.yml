@@ -397,6 +397,10 @@ jobs:
       # so nothing needs to run at release time. HOMEBREW_TAP_TOKEN is a PAT
       # with `repo` scope on the tap; GITHUB_TOKEN can only push to this repo.
       - name: Publish homebrew cask
+        # Upstream-only: the cask lives in the zzet tap and needs
+        # HOMEBREW_TAP_TOKEN, which a fork does not carry. A fork release
+        # publishes its tarballs and skips this step instead of going red.
+        if: github.repository == 'zzet/gortex'
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |

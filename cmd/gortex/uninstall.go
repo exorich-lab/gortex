@@ -17,6 +17,7 @@ import (
 	"github.com/zzet/gortex/internal/agents/codex"
 	"github.com/zzet/gortex/internal/agents/copilotcli"
 	"github.com/zzet/gortex/internal/agents/opencode"
+	"github.com/zzet/gortex/internal/agents/zcode"
 	"github.com/zzet/gortex/internal/daemon"
 	"github.com/zzet/gortex/internal/progress"
 	"github.com/zzet/gortex/internal/tui"
@@ -92,6 +93,9 @@ var (
 		// before that split could have left one in the repo tree. The name
 		// is Gortex's alone, so removing it here is safe.
 		".opencode/plugin/gortex.js",
+		// Gortex init creates this workspace config in most repos; like
+		// .mcp.json it is removed whole (the wizard previews it first).
+		".zcode/config.json",
 	}
 	uninstallDirs = []string{
 		".claude/commands",
@@ -134,6 +138,7 @@ var uninstallOwnedDirs = []uninstallOwnedDir{
 	{dir: ".agents/skills", prefix: "gortex-"},   // codex
 	{dir: ".opencode/skills", prefix: "gortex-"}, // opencode
 	{dir: ".github/skills", prefix: "gortex-"},   // copilot-cli
+	{dir: ".zcode/skills", prefix: "gortex-"},    // zcode
 }
 
 // ownedEntries lists the entries inside t.dir that are Gortex's, as
@@ -313,6 +318,7 @@ func globalHosts() []globalHost {
 		{artifacts: codex.GlobalArtifacts, remove: codex.New().RemoveGlobal},
 		{artifacts: copilotcli.GlobalArtifacts, remove: copilotcli.New().RemoveGlobal},
 		{artifacts: opencode.GlobalArtifacts, remove: opencode.New().RemoveGlobal},
+		{artifacts: zcode.GlobalArtifacts, remove: zcode.New().RemoveGlobal},
 	}
 }
 

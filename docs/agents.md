@@ -2,7 +2,7 @@
 
 `gortex install` (once per machine) and `gortex init` (once per repo)
 auto-configure Gortex for every AI coding assistant detected on your
-machine. 20 adapters ship today.
+machine. 21 adapters ship today.
 
 - `gortex install` writes user-level machinery: `~/.claude.json` MCP,
   `~/.claude/skills/gortex-*`, `~/.claude/commands/gortex-*.md`,
@@ -41,6 +41,7 @@ commands accept `--agents=<csv>` to constrain setup and
 | `pi`            | `.pi/extensions/gortex/index.ts` (project) or `~/.pi/agent/extensions/gortex/index.ts`; `AGENTS.md` communities block only when `--skills` | both | https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md |
 | `vscode`        | `.vscode/mcp.json` (`servers` key, 1.102+), `.github/copilot-instructions.md` communities block | project    | https://code.visualstudio.com/docs/copilot/chat/mcp-servers         |
 | `windsurf`      | `~/.codeium/mcp_config.json`, `.windsurfrules` communities block                                | both       | https://docs.windsurf.com/plugins/cascade/mcp                       |
+| `zcode`         | `.zcode/config.json` (project) or `~/.zcode/cli/config.json` (`mcp.servers.gortex` + `hooks.events`), `~/.zcode/AGENTS.md` rule block, `~/.zcode/skills/gortex-*`, `~/.zcode/commands/gortex-*.md`, repo `AGENTS.md` communities block, repo `.zcode/skills/gortex-*` | both | https://github.com/exorich-lab/gortex/blob/main/docs/agents.md#zcode |
 | `zed`           | OS-specific `settings.json` (`context_servers`), `.rules` communities block                     | both       | https://zed.dev/docs/ai/mcp                                         |
 
 Mode legend: **project** writes inside the repo (`gortex init` only);
@@ -55,7 +56,7 @@ third, unrelated thing — see [`llm.md`](llm.md).
 
 ## Skill and hook surfaces per host
 
-Four hosts receive the same 21 skill bodies, each re-wrapped in that
+Five hosts receive the same 21 skill bodies, each re-wrapped in that
 host's own frontmatter from one authoring source. The curated pack is
 always user-level, so `gortex init` never adds Gortex markdown to a
 repo that teammates have to review; only per-community skills, which
@@ -67,6 +68,7 @@ describe that specific codebase, are written into the repo.
 | Codex CLI | `~/.agents/skills/` | **no** — see below | `~/.codex/agents/*.toml` | native, 4 events |
 | OpenCode | `~/.config/opencode/skills/` | `~/.config/opencode/commands/` | not written | **no hook system** — JS plugin bridge |
 | GitHub Copilot CLI | `~/.copilot/skills/` | **no** — see below | `~/.copilot/agents/` | native, 4 of 14 events |
+| ZCode | `~/.zcode/skills/` | `~/.zcode/commands/` | not written | native, 2 events (`SessionStart`, `PostToolUse`) |
 
 The gaps are the hosts', not ours:
 
@@ -525,6 +527,23 @@ presence, so stdio servers don't need a type field.
 `~/.codeium/mcp_config.json`. The legacy
 `~/.codeium/windsurf/mcp_config.json` is left in place unless
 `--force` is passed, which removes it as part of the migration.
+
+### zcode
+
+ZCode nests MCP servers under `mcp.servers` (not the flat `mcpServers`
+key) in its JSON configs, and treats workspace-scoped servers as
+trusted and auto-connected:
+
+- project: `.zcode/config.json`
+- user: `~/.zcode/cli/config.json`
+
+Lifecycle hooks live under `hooks.events.<Event>` (Claude Code event
+names; ZCode parses the `hookSpecificOutput.additionalContext`
+envelope) and are inert until `hooks.enabled: true` is set — the
+adapter sets it. Instructions come from `AGENTS.md`: the repo-root
+file carries the communities block, `~/.zcode/AGENTS.md` the
+machine-wide rule block. Skills and slash commands install under
+`~/.zcode/skills/` and `~/.zcode/commands/`.
 
 ### zed
 

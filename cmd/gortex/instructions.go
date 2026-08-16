@@ -14,6 +14,7 @@ import (
 	"github.com/zzet/gortex/internal/agents/copilotcli"
 	"github.com/zzet/gortex/internal/agents/hermes"
 	"github.com/zzet/gortex/internal/agents/opencode"
+	"github.com/zzet/gortex/internal/agents/zcode"
 	"github.com/zzet/gortex/internal/profiles"
 )
 
@@ -51,6 +52,7 @@ var hostSkillSyncs = []struct {
 	{"claude code", claudecode.SyncGlobalSkills},
 	{"codex", codex.SyncSkills},
 	{"opencode", opencode.SyncSkills},
+	{"zcode", zcode.SyncSkills},
 	{"copilot cli", copilotcli.SyncSkills},
 	{"hermes", hermes.SyncSkills},
 }
@@ -190,12 +192,15 @@ func runInstructionsSwitch(cmd *cobra.Command, args []string) error {
 		// profile body, so the switch has to rewrite it. Refresh only
 		// when a block is already installed — creation stays with
 		// `gortex install`, which is what decides Codex is set up at all.
-		if path := codex.GlobalInstructionsPath(home); fileContains(path, agents.GlobalRulesStartMarker) {
-			if _, err := agents.UpsertMarkedBlock(nil, path, agents.GlobalInlineBody(dir),
-				agents.GlobalRulesStartMarker, agents.GlobalRulesEndMarker, agents.ApplyOpts{}); err != nil {
-				fmt.Fprintf(cmd.ErrOrStderr(), "warning: could not refresh %s: %v\n", path, err)
-			} else {
-				cmd.Printf("Refreshed the Gortex rule block in %s.\n", path)
+		// ZCode reads its AGENTS.md verbatim too; same rule.
+		for _, globalInline := range []func(home string) string{codex.GlobalInstructionsPath, zcode.GlobalInstructionsPath} {
+			if path := globalInline(home); fileContains(path, agents.GlobalRulesStartMarker) {
+				if _, err := agents.UpsertMarkedBlock(nil, path, agents.GlobalInlineBody(dir),
+					agents.GlobalRulesStartMarker, agents.GlobalRulesEndMarker, agents.ApplyOpts{}); err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "warning: could not refresh %s: %v\n", path, err)
+				} else {
+					cmd.Printf("Refreshed the Gortex rule block in %s.\n", path)
+				}
 			}
 		}
 	}
