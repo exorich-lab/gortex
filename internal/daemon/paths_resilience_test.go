@@ -34,19 +34,29 @@ func TestSocketPathClampFallback(t *testing.T) {
 	}
 }
 
-// TestIdleTimeoutFromEnvParse covers the opt-in idle-timeout parsing: only a
-// valid positive duration enables auto-exit; everything else stays disabled.
+// TestIdleTimeoutFromEnvParse covers the idle-timeout parsing: default-on
+// (DefaultIdleTimeout), an explicit positive duration overrides, an explicit
+// non-positive value disables, and garbage falls back to the default rather
+// than silently turning the mechanism off.
 func TestIdleTimeoutFromEnvParse(t *testing.T) {
-	if parseIdleTimeout("") != 0 {
-		t.Error("empty must disable the idle timeout")
+	t.Setenv("GORTEX_DAEMON_IDLE_TIMEOUT", "")
+	if IdleTimeoutFromEnv() != DefaultIdleTimeout {
+		t.Error("unset/empty must fall back to DefaultIdleTimeout")
 	}
-	if parseIdleTimeout("garbage") != 0 {
-		t.Error("an unparseable value must disable the idle timeout")
+	t.Setenv("GORTEX_DAEMON_IDLE_TIMEOUT", "garbage")
+	if IdleTimeoutFromEnv() != DefaultIdleTimeout {
+		t.Error("an unparseable value must fall back to DefaultIdleTimeout")
 	}
-	if parseIdleTimeout("-5m") != 0 {
+	t.Setenv("GORTEX_DAEMON_IDLE_TIMEOUT", "0")
+	if IdleTimeoutFromEnv() != 0 {
+		t.Error("an explicit 0 must disable the idle timeout")
+	}
+	t.Setenv("GORTEX_DAEMON_IDLE_TIMEOUT", "-5m")
+	if IdleTimeoutFromEnv() != 0 {
 		t.Error("a non-positive duration must disable the idle timeout")
 	}
-	if got := parseIdleTimeout("30m"); got != 30*time.Minute {
-		t.Errorf("parseIdleTimeout(30m) = %v, want 30m", got)
+	t.Setenv("GORTEX_DAEMON_IDLE_TIMEOUT", "45m")
+	if got := IdleTimeoutFromEnv(); got != 45*time.Minute {
+		t.Errorf("IdleTimeoutFromEnv(45m) = %v, want 45m", got)
 	}
 }

@@ -321,9 +321,18 @@ var deadPeerSweepInterval = 30 * time.Second
 
 // runMaintenance is the daemon's background hygiene loop: every
 // deadPeerSweepInterval it sweeps sessions whose originating client process has
-// died (platform.ProcessAlive), and — when GORTEX_DAEMON_IDLE_TIMEOUT is set —
-// it shuts the daemon down after that long with no live sessions. Exits on the
-// shutdown signal.
+// died (platform.ProcessAlive), and it shuts the daemon down after the idle
+// timeout (DefaultIdleTimeout unless GORTEX_DAEMON_IDLE_TIMEOUT overrides it)
+// with no live sessions. Exits on the shutdown signal.
+//
+// Idle-exit is default-on in this fork: the daemon holds a large
+// page-cache RSS over the store, and a warm restart is seconds, so a
+// machine that stops using Gortex should get its memory back without
+// anyone remembering to run `gortex daemon stop`. Set
+// GORTEX_DAEMON_IDLE_TIMEOUT=0 to keep the daemon resident forever.
+// ponytail: idle is measured by live sessions only — a watch-triggered
+// reindex with zero connected clients can be interrupted by the exit;
+// the store closes cleanly and the next auto-start resumes incrementally.
 func (s *Server) runMaintenance() {
 	idle := IdleTimeoutFromEnv()
 	tick := deadPeerSweepInterval
@@ -373,23 +382,28 @@ func (s *Server) runMaintenance() {
 	}
 }
 
-// IdleTimeoutFromEnv reads the opt-in GORTEX_DAEMON_IDLE_TIMEOUT — a Go
-// duration (e.g. "30m", "2h"). Returns 0 (disabled) when unset, empty, or
-// unparseable, so the daemon only ever auto-exits when the user asked it to.
-func IdleTimeoutFromEnv() time.Duration {
-	return parseIdleTimeout(os.Getenv("GORTEX_DAEMON_IDLE_TIMEOUT"))
-}
+// DefaultIdleTimeout is how long the daemon stays up with zero live
+// sessions before shutting itself down. See runMaintenance for why this
+// is default-on in this fork.
+const DefaultIdleTimeout = 30 * time.Minute
 
-func parseIdleTimeout(v string) time.Duration {
-	v = strings.TrimSpace(v)
+// IdleTimeoutFromEnv reads GORTEX_DAEMON_IDLE_TIMEOUT — a Go duration
+// (e.g. "30m", "2h"). Unset, empty, or unparseable falls back to
+// DefaultIdleTimeout; an explicit non-positive duration ("0", "0s",
+// "-5m") disables the idle exit entirely, so opting out stays possible
+// with one variable and no config file.
+func IdleTimeoutFromEnv() time.Duration {
+	v := strings.TrimSpace(os.Getenv("GORTEX_DAEMON_IDLE_TIMEOUT"))
 	if v == "" {
-		return 0
+		return DefaultIdleTimeout
 	}
-	d, err := time.ParseDuration(v)
-	if err != nil || d <= 0 {
-		return 0
+	if d, err := time.ParseDuration(v); err == nil {
+		if d <= 0 {
+			return 0
+		}
+		return d
 	}
-	return d
+	return DefaultIdleTimeout
 }
 
 // handle runs the per-connection lifecycle: handshake → dispatch loop →

@@ -80,6 +80,11 @@ tarball exists yet for your platform it falls back to a from-source
 build (requires Go). Re-run to upgrade. From-source builds directly:
 `git clone https://github.com/exorich-lab/gortex && cd gortex && go build -o ~/.local/bin/gortex ./cmd/gortex`.
 
+Fork daemon policy: the daemon auto-starts on the first MCP session and
+exits by itself after 30 minutes with no live sessions, so an idle
+machine gets its memory back (warm restart is ~2s). Opt out with
+`GORTEX_DAEMON_IDLE_TIMEOUT=0`.
+
 Upstream (zzet/gortex) install: [docs/installation.md](docs/installation.md).
 
 ## Quick Start
